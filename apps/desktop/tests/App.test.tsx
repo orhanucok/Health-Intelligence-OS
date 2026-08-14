@@ -126,4 +126,13 @@ describe("HealthCouncil Desktop unified product shell", () => {
     ).toBeGreaterThan(0);
     expect(screen.getByText(/Güvenlik kapıları etkin/)).toBeInTheDocument();
   });
+
+  it("persists the integrated shadcn light and dark theme choice", () => {
+    window.localStorage.removeItem("healthcouncil-theme");
+    render(<App />);
+    expect(document.documentElement).toHaveClass("dark");
+    fireEvent.click(screen.getByRole("button", { name: "Açık temaya geç" }));
+    expect(document.documentElement).not.toHaveClass("dark");
+    expect(window.localStorage.getItem("healthcouncil-theme")).toBe("light");
+  });
 });

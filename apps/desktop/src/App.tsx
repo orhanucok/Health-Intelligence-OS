@@ -41,6 +41,7 @@ import {
   MessageCircle,
   Milestone as TimelineIcon,
   Microscope,
+  Moon,
   MoreHorizontal,
   Network,
   PanelRightOpen,
@@ -55,6 +56,7 @@ import {
   ShieldCheck,
   Sparkles,
   Stethoscope,
+  Sun,
   Target,
   TestTubes,
   TrendingDown,
@@ -68,7 +70,15 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
+import { UiBadge } from "./components/ui/badge";
+import { Button } from "./components/ui/button";
 import {
   councilAgents,
   documents,
@@ -189,7 +199,11 @@ function Badge({
   children: ReactNode;
   tone?: string;
 }) {
-  return <span className={`badge badge-${tone}`}>{children}</span>;
+  return (
+    <UiBadge variant="secondary" className={`badge badge-${tone}`}>
+      {children}
+    </UiBadge>
+  );
 }
 
 function IconButton({
@@ -202,14 +216,16 @@ function IconButton({
   onClick?: () => void;
 }) {
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="icon"
       className="icon-button"
       aria-label={label}
       title={label}
       onClick={onClick}
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -3113,7 +3129,15 @@ export function App() {
   const [sidebarCompact, setSidebarCompact] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [toast, setToast] = useState("");
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    const saved = window.localStorage.getItem("healthcouncil-theme");
+    return saved === "light" || saved === "dark" ? saved : "dark";
+  });
   const current = viewTitles[view];
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    window.localStorage.setItem("healthcouncil-theme", theme);
+  }, [theme]);
   const notify = (message: string) => {
     setToast(message);
     window.setTimeout(() => setToast(""), 3200);
@@ -3163,12 +3187,6 @@ export function App() {
             <strong>HealthCouncil</strong>
             <small>PERSONAL HEALTH OS</small>
           </div>
-          <IconButton
-            label="Menüyü daralt"
-            onClick={() => setSidebarCompact(!sidebarCompact)}
-          >
-            <Menu size={18} />
-          </IconButton>
         </div>
         <button className="patient-switcher">
           <span className="avatar">{patient.initials}</span>
@@ -3220,10 +3238,55 @@ export function App() {
         </div>
       </aside>
       <header className="topbar">
-        <div className="breadcrumb">
-          <span>HealthCouncil</span>
-          <ChevronRight size={14} />
-          <strong>{current.title}</strong>
+        <IconButton
+          label="Menüyü daralt"
+          onClick={() => setSidebarCompact(!sidebarCompact)}
+        >
+          <Menu size={18} />
+        </IconButton>
+        <span className="topbar-separator" />
+        <div className="top-nav" aria-label="Bölüm navigasyonu">
+          <button
+            className={view === "inbox" ? "active" : ""}
+            onClick={() => setView("inbox")}
+          >
+            Overview
+          </button>
+          <button
+            className={
+              [
+                "passport",
+                "documents",
+                "review",
+                "timeline",
+                "labs",
+                "medications",
+              ].includes(view)
+                ? "active"
+                : ""
+            }
+            onClick={() => setView("passport")}
+          >
+            Health
+          </button>
+          <button
+            className={
+              ["cases", "research", "council", "probabilities"].includes(view)
+                ? "active"
+                : ""
+            }
+            onClick={() => setView("cases")}
+          >
+            Intelligence
+          </button>
+          <button
+            className={
+              ["reports", "outcomes", "advanced"].includes(view) ? "active" : ""
+            }
+            onClick={() => setView("reports")}
+          >
+            Outputs
+          </button>
         </div>
         <div className="global-search">
           <Search size={16} />
@@ -3237,6 +3300,14 @@ export function App() {
           <Badge tone="green">
             <i className="connection-dot" /> Yerel & gizli
           </Badge>
+          <IconButton
+            label={theme === "dark" ? "Açık temaya geç" : "Koyu temaya geç"}
+            onClick={() =>
+              setTheme((value) => (value === "dark" ? "light" : "dark"))
+            }
+          >
+            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+          </IconButton>
           <IconButton label="Yardım">
             <HelpCircle size={18} />
           </IconButton>

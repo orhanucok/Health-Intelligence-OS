@@ -1,20 +1,26 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "./theme.css";
+
+@custom-variant dark (&:is(.dark *));
+
 :root {
-  font-family: "Segoe UI Variable", "Segoe UI", Inter, sans-serif;
-  color: #172b35;
-  background: #eef2f2;
+  font-family: Inter, "Segoe UI Variable", "Segoe UI", sans-serif;
+  color: var(--foreground);
+  background: var(--background);
   font-synthesis: none;
-  --navy: #102c35;
-  --navy-2: #173c45;
-  --ink: #172b35;
-  --muted: #657780;
-  --faint: #8c9ba1;
-  --paper: #ffffff;
-  --canvas: #f3f6f5;
-  --line: #dfe7e5;
-  --line-soft: #edf1f0;
-  --teal: #24786e;
-  --teal-dark: #175b54;
-  --teal-soft: #e7f4f0;
+  --navy: var(--foreground);
+  --navy-2: var(--secondary);
+  --ink: var(--foreground);
+  --muted: var(--muted-foreground);
+  --faint: color-mix(in oklab, var(--muted-foreground) 75%, transparent);
+  --paper: var(--card);
+  --canvas: var(--background);
+  --line: var(--border);
+  --line-soft: color-mix(in oklab, var(--border) 55%, transparent);
+  --teal: var(--health);
+  --teal-dark: color-mix(in oklab, var(--health) 75%, black);
+  --teal-soft: var(--health-soft);
   --blue: #3e79c9;
   --blue-soft: #eaf2fc;
   --purple: #7865bb;
@@ -25,8 +31,8 @@
   --red-soft: #fbecea;
   --green: #398468;
   --green-soft: #e9f5ef;
-  --shadow: 0 14px 42px rgba(22, 46, 51, 0.08);
-  --shadow-sm: 0 4px 16px rgba(22, 46, 51, 0.06);
+  --shadow: 0 8px 28px color-mix(in oklab, var(--foreground) 8%, transparent);
+  --shadow-sm: 0 1px 3px color-mix(in oklab, var(--foreground) 9%, transparent);
 }
 
 * {
@@ -4583,5 +4589,844 @@ button:disabled {
   }
   .med-details > div:last-child {
     display: none;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* shadcn-admin integration layer                                             */
+/* MIT design reference: satnaing/shadcn-admin                               */
+/* -------------------------------------------------------------------------- */
+
+html,
+body,
+#root {
+  color: var(--foreground);
+  background: var(--background);
+}
+
+body {
+  letter-spacing: -0.006em;
+}
+
+button:not(:disabled),
+[role="button"]:not(:disabled) {
+  cursor: pointer;
+}
+
+.app-shell {
+  grid-template: 64px minmax(0, 1fr) 32px / 264px minmax(0, 1fr);
+  color: var(--foreground);
+  background: var(--background);
+}
+
+.sidebar {
+  padding: 0 12px 12px;
+  color: var(--sidebar-foreground);
+  background: var(--sidebar-ui);
+  border-right: 1px solid var(--sidebar-border);
+  box-shadow: none;
+}
+
+.brand-row {
+  height: 64px;
+  flex-basis: 64px;
+  gap: 10px;
+  padding: 0 10px;
+  border-bottom: 0;
+}
+
+.brand-icon {
+  width: 34px;
+  height: 34px;
+  flex-basis: 34px;
+  color: var(--primary-foreground);
+  background: var(--primary);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: var(--shadow-sm);
+}
+
+.brand-copy strong {
+  color: var(--foreground);
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.brand-copy small {
+  margin-top: 2px;
+  color: var(--muted-foreground);
+  font:
+    500 9px Inter,
+    sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.patient-switcher {
+  grid-template-columns: 36px 1fr 16px;
+  gap: 10px;
+  margin: 4px 0 12px;
+  padding: 9px 10px;
+  color: var(--foreground);
+  background: var(--background);
+  border-color: var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.patient-switcher:hover {
+  background: var(--accent-ui);
+}
+
+.patient-switcher strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.patient-switcher small {
+  margin-top: 2px;
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+
+.avatar,
+.top-avatar {
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.avatar {
+  font-size: 11px;
+}
+
+.sidebar nav {
+  scrollbar-color: var(--border) transparent;
+}
+
+.sidebar nav section {
+  margin: 8px 0 16px;
+}
+
+.sidebar nav section > p {
+  margin: 0 10px 6px;
+  color: var(--muted-foreground);
+  font:
+    600 10px Inter,
+    sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.sidebar nav button,
+.sidebar-bottom > button {
+  min-height: 38px;
+  grid-template-columns: 25px 1fr auto;
+  gap: 7px;
+  padding: 0 10px;
+  margin: 1px 0;
+  color: var(--muted-foreground);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sidebar nav button svg,
+.sidebar-bottom > button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.sidebar nav button:hover,
+.sidebar-bottom > button:hover {
+  color: var(--foreground);
+  background: var(--accent-ui);
+}
+
+.sidebar nav button.active,
+.sidebar-bottom > button.active {
+  color: var(--foreground);
+  background: var(--sidebar-accent);
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+.sidebar nav button.active::before {
+  display: none;
+}
+
+.sidebar nav button b {
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  color: white;
+  background: var(--destructive);
+  border-radius: 999px;
+  font-size: 10px;
+}
+
+.sidebar-bottom {
+  padding-top: 8px;
+  border-top-color: var(--border);
+}
+
+.local-status {
+  margin-top: 8px;
+  padding: 10px;
+  color: var(--health);
+  background: var(--health-soft);
+  border-color: color-mix(in oklab, var(--health) 24%, var(--border));
+  border-radius: var(--radius-lg);
+}
+
+.local-status strong {
+  color: var(--foreground);
+  font-size: 11px;
+}
+
+.local-status small {
+  color: var(--muted-foreground);
+  font-size: 9px;
+}
+
+.topbar {
+  gap: 10px;
+  padding: 0 20px;
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--background) 92%, transparent);
+  border-bottom-color: var(--border);
+  box-shadow: none;
+  backdrop-filter: blur(12px);
+}
+
+.topbar-separator {
+  width: 1px;
+  height: 24px;
+  margin: 0 2px;
+  background: var(--border);
+}
+
+.top-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.top-nav button {
+  height: 34px;
+  padding: 0 11px;
+  color: var(--muted-foreground);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.top-nav button:hover {
+  color: var(--foreground);
+  background: var(--accent-ui);
+}
+
+.top-nav button.active {
+  color: var(--foreground);
+  font-weight: 650;
+}
+
+.global-search {
+  max-width: 410px;
+  height: 36px;
+  margin-left: auto;
+  margin-right: 8px;
+  padding: 0 11px;
+  color: var(--muted-foreground);
+  background: var(--background);
+  border-color: var(--input);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.global-search:focus-within {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 25%, transparent);
+}
+
+.global-search input {
+  color: var(--foreground);
+  font-size: 12px;
+}
+
+.global-search kbd {
+  color: var(--muted-foreground);
+  background: var(--muted-ui);
+  border-color: var(--border);
+  font-size: 9px;
+}
+
+.top-actions {
+  gap: 4px;
+}
+
+.top-avatar {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  font-size: 10px;
+}
+
+.icon-button {
+  width: 36px;
+  height: 36px;
+  color: var(--muted-foreground);
+  border-radius: var(--radius-md);
+}
+
+.icon-button:hover {
+  color: var(--foreground);
+  background: var(--accent-ui);
+}
+
+.notification-dot {
+  background: var(--destructive);
+  box-shadow: 0 0 0 2px var(--background);
+}
+
+.workspace {
+  padding: 26px 30px 64px;
+  background: var(--background);
+}
+
+.screen {
+  max-width: 1480px;
+}
+
+.safety-footer {
+  color: var(--muted-foreground);
+  background: var(--background);
+  border-top-color: var(--border);
+  font-size: 10px;
+}
+
+.safety-footer svg {
+  color: var(--health);
+}
+
+.card {
+  color: var(--card-foreground);
+  background: var(--card);
+  border-color: var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.page-heading {
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-heading h1 {
+  margin: 4px 0 5px;
+  color: var(--foreground);
+  font-size: 28px;
+  font-weight: 680;
+  letter-spacing: -0.035em;
+}
+
+.page-heading > div:first-child > p:not(.eyebrow) {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.eyebrow,
+.section-heading span {
+  color: var(--muted-foreground);
+  font-family: Inter, sans-serif;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.07em;
+}
+
+.section-heading {
+  min-height: 42px;
+  margin-bottom: 14px;
+}
+
+.section-heading h2 {
+  margin-top: 5px;
+  color: var(--foreground);
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.primary-button,
+.secondary-button,
+.text-button {
+  min-height: 36px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.primary-button {
+  color: var(--primary-foreground);
+  background: var(--primary);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.primary-button:hover {
+  background: color-mix(in oklab, var(--primary) 88%, transparent);
+}
+
+.secondary-button {
+  color: var(--foreground);
+  background: var(--background);
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.secondary-button:hover {
+  color: var(--foreground);
+  background: var(--accent-ui);
+  border-color: var(--border);
+}
+
+.text-button {
+  color: var(--muted-foreground);
+}
+
+.text-button:hover {
+  color: var(--foreground);
+}
+
+.badge {
+  min-height: 22px;
+  padding: 2px 7px;
+  color: var(--foreground);
+  background: var(--secondary);
+  border-color: var(--border);
+  border-radius: var(--radius-md);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.badge-green {
+  color: var(--health);
+  background: var(--health-soft);
+  border-color: color-mix(in oklab, var(--health) 25%, var(--border));
+}
+
+.welcome-panel {
+  min-height: 248px;
+  margin-bottom: 18px;
+  color: var(--foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.welcome-copy {
+  padding: 28px 30px;
+  color: var(--foreground);
+}
+
+.welcome-copy .badge {
+  color: var(--health);
+  background: var(--health-soft);
+  border-color: color-mix(in oklab, var(--health) 25%, var(--border));
+}
+
+.welcome-copy h1 {
+  margin: 14px 0 7px;
+  color: var(--foreground);
+  font-size: 30px;
+  font-weight: 680;
+}
+
+.welcome-copy > p {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.ask-bar {
+  height: 48px;
+  margin-top: 20px;
+  color: var(--muted-foreground);
+  background: var(--background);
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.ask-bar input {
+  color: var(--foreground);
+  background: transparent;
+  font-size: 12px;
+}
+
+.ask-bar button {
+  height: 34px;
+  color: var(--primary-foreground);
+  background: var(--primary);
+  border-radius: var(--radius-md);
+  font-size: 11px;
+}
+
+.prompt-chips button {
+  padding: 6px 9px;
+  color: var(--muted-foreground);
+  background: var(--muted-ui);
+  border-color: var(--border);
+  border-radius: var(--radius-md);
+  font-size: 10px;
+}
+
+.prompt-chips button:hover {
+  color: var(--foreground);
+  background: var(--accent-ui);
+}
+
+.health-score-card {
+  color: var(--foreground);
+  background: var(--muted-ui);
+  border-left-color: var(--border);
+}
+
+.health-score-card p {
+  color: var(--muted-foreground) !important;
+  font-size: 11px !important;
+}
+
+.health-score-card button {
+  color: var(--foreground);
+  background: var(--background);
+  border-color: var(--border);
+  font-size: 11px;
+}
+
+.metric-card {
+  min-height: 92px;
+  padding: 15px;
+  color: var(--foreground);
+  background: var(--card);
+  border-color: var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.metric-card:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in oklab, var(--foreground) 22%, var(--border));
+  box-shadow: var(--shadow);
+}
+
+.metric-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+}
+
+.metric-copy small {
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+
+.metric-copy strong {
+  color: var(--foreground);
+  font-size: 20px;
+}
+
+.metric-copy > span {
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+
+.attention-card,
+.next-visit-card,
+.activity-card,
+.table-card,
+.timeline-card,
+.lab-chart-card,
+.provider-card,
+.review-card {
+  box-shadow: var(--shadow-sm);
+}
+
+.attention-item {
+  min-height: 76px;
+  color: var(--foreground);
+  border-bottom-color: var(--border);
+}
+
+.attention-item:hover {
+  background: var(--accent-ui);
+}
+
+.attention-main small,
+.attention-main span,
+.attention-main em,
+.attention-action,
+.mini-event small {
+  color: var(--muted-foreground);
+}
+
+.attention-main small {
+  font-size: 9px;
+}
+
+.attention-main strong {
+  font-size: 13px;
+}
+
+.attention-main span,
+.attention-main em,
+.attention-action {
+  font-size: 10px;
+}
+
+.next-visit-card h3,
+.activity-card h3 {
+  color: var(--foreground);
+}
+
+.next-visit-card p,
+.next-visit-card strong,
+.mini-event small {
+  font-size: 10px;
+}
+
+.next-visit-card > button {
+  color: var(--foreground);
+  background: var(--background);
+  border-color: var(--border);
+  font-size: 11px;
+}
+
+.toast {
+  color: var(--primary-foreground);
+  background: var(--primary);
+  border-color: var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  font-size: 12px;
+}
+
+/* Make the formerly compressed clinical detail readable at desktop scale. */
+.workspace :is(p, li, label, input, textarea, select, button) {
+  font-size: max(11px, 0.72rem);
+}
+
+.workspace :is(td, th, code) {
+  font-size: max(10px, 0.68rem);
+}
+
+.workspace small {
+  font-size: max(9px, 0.62rem) !important;
+}
+
+.workspace :is(h3, article strong, section strong) {
+  color: var(--foreground);
+}
+
+.workspace :is(input, textarea, select) {
+  color: var(--foreground);
+  background-color: var(--background);
+  border-color: var(--input);
+}
+
+.workspace :is(.document-row, .lab-row, .route-row, .matrix-row, .check-row) {
+  border-color: var(--border);
+}
+
+.dark {
+  --blue-soft: color-mix(in oklab, #3e79c9 18%, var(--card));
+  --purple-soft: color-mix(in oklab, #7865bb 18%, var(--card));
+  --orange-soft: color-mix(in oklab, #c97b35 18%, var(--card));
+  --red-soft: color-mix(in oklab, #bd554e 18%, var(--card));
+  --green-soft: color-mix(in oklab, #398468 18%, var(--card));
+}
+
+.dark
+  .workspace
+  :is(
+    .pipeline,
+    .upload-zone,
+    .review-strip,
+    .medication-alert,
+    .calibration-banner,
+    .must-not-miss,
+    .advanced-intro,
+    .routing-table,
+    .provider-summary,
+    .whatif-preview,
+    .onboarding-upload
+  ) {
+  color: var(--foreground);
+  background: var(--card);
+  border-color: var(--border);
+}
+
+.dark
+  .workspace
+  :is(
+    .document-row,
+    .table-head,
+    .lab-row,
+    .route-row,
+    .matrix-head,
+    .matrix-row
+  ) {
+  color: var(--foreground);
+  background: transparent;
+}
+
+.dark
+  .workspace
+  :is(
+    .source-compare button,
+    .provider-auth,
+    .formula-note,
+    .report-callout,
+    .snapshot-card
+  ) {
+  color: var(--foreground);
+  background: var(--muted-ui);
+  border-color: var(--border);
+}
+
+.dark .case-state-strip,
+.dark .questions-head,
+.dark .chat-composer,
+.dark .chat-composer > div:nth-child(2) {
+  color: var(--foreground);
+  background: var(--card);
+  border-color: var(--border);
+}
+
+.dark .case-state-strip > div:not(:last-child)::after {
+  background: var(--border);
+}
+
+.dark .case-state-strip span,
+.dark .adaptive-questions > button > span {
+  color: var(--muted-foreground);
+  background: var(--muted-ui);
+}
+
+.dark .case-item.active,
+.dark .adaptive-questions > button.answered {
+  color: var(--foreground);
+  background: var(--health-soft);
+}
+
+.dark .user-message > div:last-child,
+.dark .ai-message > div:last-child {
+  color: var(--foreground);
+  background: var(--secondary);
+  border-color: var(--border);
+}
+
+.dark .adaptive-questions {
+  border-color: var(--border);
+}
+
+.dark .adaptive-questions > button {
+  color: var(--foreground);
+  background: var(--card);
+  border-color: var(--border);
+}
+
+.dark .chat-composer textarea {
+  color: var(--foreground);
+  background: transparent;
+}
+
+/* Onboarding is an intentionally light, focused setup surface in both themes. */
+.dark .onboarding-shell {
+  --foreground: #17212b;
+  --background: #ffffff;
+  --card: #ffffff;
+  --card-foreground: #17212b;
+  --primary: #17212b;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted-ui: #f4f4f5;
+  --muted-foreground: #667085;
+  --accent-ui: #f4f4f5;
+  --accent-foreground: #18181b;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --line: #e4e4e7;
+  --line-soft: #f0f1f2;
+  --paper: #ffffff;
+  --green-soft: #e9f5ef;
+  --red-soft: #fbecea;
+  color: #17212b;
+  background: #ffffff;
+}
+
+.dark .onboarding-content h1 {
+  color: #17212b;
+}
+
+.dark .onboarding-content > p,
+.dark .onboarding-consent p,
+.dark .setup-options p,
+.dark .mini-provider-grid small,
+.dark .basic-fields label {
+  color: #667085;
+}
+
+.dark .onboarding-consent {
+  background: #f5f7f7;
+}
+
+.dark .setup-options button,
+.dark .mini-provider-grid button,
+.dark .onboarding-upload button,
+.dark .basic-fields input,
+.dark .basic-fields select {
+  color: #17212b;
+  background: #ffffff;
+  border-color: #e4e4e7;
+}
+
+.dark
+  .workspace
+  :is(.page-heading, .section-heading, .timeline-content, .probability-main)
+  p,
+.dark
+  .workspace
+  :is(.page-heading, .section-heading, .timeline-content, .probability-main)
+  span {
+  color: var(--muted-foreground);
+}
+
+.sidebar-compact {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+
+@media (max-width: 1360px) {
+  .app-shell {
+    grid-template-columns: 236px minmax(0, 1fr);
+  }
+
+  .top-nav button {
+    padding: 0 8px;
+    font-size: 12px;
+  }
+
+  .global-search {
+    max-width: 320px;
+  }
+
+  .workspace {
+    padding-right: 22px;
+    padding-left: 22px;
+  }
+
+  .sidebar-compact {
+    grid-template-columns: 76px minmax(0, 1fr);
   }
 }
