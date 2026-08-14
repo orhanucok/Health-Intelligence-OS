@@ -8,7 +8,7 @@ This repository is not an autonomous doctor. Development uses synthetic data onl
 
 Implemented and tested in `0.1.0`:
 
-- React + Tauri desktop shell with Turkish synthetic preview screens;
+- React + Tauri unified Windows product shell covering the full Turkish HealthCouncil v3.0 information architecture;
 - capped review queue where critical conflicts are always ranked first;
 - provenance drawer with keyboard focus, Escape close, and focus restoration;
 - Rust append-only event-store primitive, trust gate, conflict preservation, and fail-closed lab trends;

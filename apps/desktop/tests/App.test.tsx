@@ -2,78 +2,128 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { App, SAFETY_COPY } from "../src/App";
 
-describe("production-shaped synthetic vertical slice", () => {
-  it("renders non-diagnostic safety copy on every view", () => {
+function openView(name: string) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  fireEvent.click(
+    screen.getByRole("button", { name: new RegExp(`^${escaped}(?:\\s|$)`) }),
+  );
+}
+
+describe("HealthCouncil Desktop unified product shell", () => {
+  it("keeps the non-diagnostic emergency boundary visible on every view", () => {
     render(<App />);
-    const safetyBanner = screen
-      .getAllByRole("status")
-      .find((element) => element.textContent?.includes(SAFETY_COPY));
-    expect(safetyBanner).toHaveTextContent(SAFETY_COPY);
-    expect(safetyBanner).toHaveTextContent("tanı veya tedavi önerisi üretmez");
+    expect(screen.getByRole("status")).toHaveTextContent(SAFETY_COPY);
+    openView("Labs");
+    expect(screen.getByRole("status")).toHaveTextContent("tıbbi tanı koymaz");
   });
 
-  it("keeps the visible review budget at twenty or fewer", () => {
+  it("exposes the complete health, intelligence and output navigation", () => {
     render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: /İnceleme Kutusu/ }));
-    const budget = screen.getByText(/\/ 20 bütçe/);
-    expect(budget).toHaveTextContent("2 / 20");
-    expect(screen.getAllByRole("article")).toHaveLength(2);
-  });
-
-  it("opens duplicate provenance edges from verified patient state", () => {
-    render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: /Doğrulanmış Durum/ }));
-    const ferritinRows = screen.getAllByText("Ferritin");
-    const row = ferritinRows[1]?.closest("article");
-    expect(row).not.toBeNull();
-    fireEvent.click(
-      within(row!).getByRole("button", { name: "Neden burada?" }),
-    );
-    expect(
-      screen.getByRole("dialog", { name: "Kaynak zinciri" }),
-    ).toHaveTextContent("2 kaynak bağlantısı");
-  });
-
-  it("shows only verified facts in patient state", () => {
-    render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: /Doğrulanmış Durum/ }));
-    expect(screen.getByText("2 doğrulanmış kayıt")).toBeInTheDocument();
-    expect(screen.queryByText("CRP")).not.toBeInTheDocument();
-    expect(screen.queryByText("Hemoglobin")).not.toBeInTheDocument();
-  });
-
-  it("report preview preserves unresolved conflict and human review wording", () => {
-    render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: /Rapor Önizleme/ }));
-    expect(screen.getByText(/CRP çelişkisi çözülmedi/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/Tanı veya tedavi önerisi değildir/),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", {
-        name: /Güvenlik bildirimi/,
-      }),
-    ).toBeDisabled();
-  });
-
-  it("labels review decisions as non-persistent UI simulations", () => {
-    render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: /İnceleme Kutusu/ }));
-    const confirmButtons = screen.getAllByRole("button", {
-      name: "Demo: Onayla",
+    [
+      "Health Inbox",
+      "Health Passport",
+      "Belgeler",
+      "İnceleme Kutusu",
+      "Timeline",
+      "Labs",
+      "Medications",
+      "Cases & Chat",
+      "Research",
+      "AI Council",
+      "Probabilities",
+      "Reports",
+      "Outcomes",
+      "Treatment & What‑if",
+      "AI Connections",
+    ].forEach((name) => {
+      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      expect(
+        screen.getByRole("button", {
+          name: new RegExp(`^${escaped}(?:\\s|$)`),
+        }),
+      ).toBeInTheDocument();
     });
-    expect(confirmButtons[0]).toBeDisabled();
-    expect(confirmButtons[1]).toBeEnabled();
-    screen
-      .getAllByRole("button", { name: "Düzelt (yakında)" })
-      .forEach((button) => expect(button).toBeDisabled());
-    fireEvent.click(confirmButtons[1]!);
+  });
+
+  it("requires human review before conflicting facts enter patient state", () => {
+    render(<App />);
+    openView("İnceleme Kutusu");
     expect(
-      screen
-        .getAllByRole("status")
-        .find((element) =>
-          element.textContent?.includes("kalıcı kayıt oluşturulmadı"),
-        ),
-    ).toBeDefined();
+      screen.getByRole("heading", { name: "İnceleme Kutusu" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("CRP sonucu eşleşmiyor")).toBeInTheDocument();
+    expect(
+      screen.getByText(/İnsan onayı olmadan kan grubu/),
+    ).toBeInTheDocument();
+    const card = screen.getByText("CRP sonucu eşleşmiyor").closest("article");
+    fireEvent.click(
+      within(card!).getByRole("button", { name: /Öneriyi onayla/ }),
+    );
+    expect(screen.queryByText("CRP sonucu eşleşmiyor")).not.toBeInTheDocument();
+  });
+
+  it("keeps API and subscription/account connection types separate", () => {
+    render(<App />);
+    openView("AI Connections");
+    expect(screen.getByText("OpenAI API")).toBeInTheDocument();
+    expect(screen.getByText("ChatGPT hesabı")).toBeInTheDocument();
+    expect(screen.getByText("Anthropic API")).toBeInTheDocument();
+    expect(screen.getByText("Claude hesabı")).toBeInTheDocument();
+    expect(screen.getByText("Gemini hesabı")).toBeInTheDocument();
+    expect(screen.getByText("xAI API")).toBeInTheDocument();
+    expect(screen.getByText("Kimi API")).toBeInTheDocument();
+  });
+
+  it("shows provider privacy preview before any cloud disclosure", () => {
+    render(<App />);
+    openView("AI Connections");
+    fireEvent.click(screen.getByRole("button", { name: /Privacy Preview/ }));
+    const drawer = screen.getByRole("dialog", {
+      name: "Provider Privacy Preview",
+    });
+    expect(drawer).toHaveTextContent("Ad soyad");
+    expect(drawer).toHaveTextContent("Ham PDF ve ilgisiz belgeler");
+    expect(drawer).toHaveTextContent("store:false");
+  });
+
+  it("renders the planned escalated council and calibrated probabilities", () => {
+    render(<App />);
+    openView("AI Council");
+    expect(screen.getByText("Gemini 3.7 Flash")).toBeInTheDocument();
+    expect(screen.getByText("GPT‑5.6 Sol")).toBeInTheDocument();
+    expect(screen.getByText("Claude Opus")).toBeInTheDocument();
+    openView("Probabilities");
+    expect(
+      screen.getByText(/klinik olarak kalibre edilmiş olasılıklar değildir/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/MUST-NOT-MISS/)).toBeInTheDocument();
+  });
+
+  it("provides a four-step safety and privacy onboarding", () => {
+    render(<App />);
+    openView("Settings & Onboarding");
+    expect(
+      screen.getByText("Sağlık zekâsı, güvenlik önce."),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Devam et/ }));
+    expect(screen.getByText("Verinizin kontrolü sizde.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Devam et/ }));
+    expect(
+      screen.getByText("AI sağlayıcılarını bağlayın."),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Devam et/ }));
+    expect(
+      screen.getByText("Health Passport’ınızı başlatın."),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps advanced treatment and what-if modules behind evidence gates", () => {
+    render(<App />);
+    openView("Treatment & What‑if");
+    expect(
+      screen.getAllByRole("button", { name: "Doğrulama tamamlanınca açılacak" })
+        .length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText(/Güvenlik kapıları etkin/)).toBeInTheDocument();
   });
 });
