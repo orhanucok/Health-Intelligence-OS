@@ -1,0 +1,8 @@
+[workspace]
+members = ["crates/clinical-core", "apps/desktop/src-tauri"]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+license = "UNLICENSED"
+version = "0.1.0"

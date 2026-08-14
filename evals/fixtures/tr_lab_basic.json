@@ -1,0 +1,7 @@
+{
+  "fixture_id": "tr-lab-001",
+  "document_type": "lab",
+  "locale": "tr-TR",
+  "text": "Hemoglobin: 13,2 g/dL; Glukoz: 96 mg/dL; CRP: 2,4 mg/L",
+  "metadata": {"synthetic": true, "source": "synthetic_fixture"}
+}

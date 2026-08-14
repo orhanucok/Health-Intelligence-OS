@@ -1,0 +1,29 @@
+{
+  "name": "health-intelligence-os",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "npm@10.9.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "setup:python": "python -m venv .venv && \".venv\\Scripts\\python.exe\" -m pip install -e \"services/clinical-worker[dev]\"",
+    "dev": "npm run dev --workspace @health-intelligence/desktop",
+    "build": "npm run build --workspace @health-intelligence/contracts && npm run build --workspace @health-intelligence/desktop",
+    "format": "npm run format --workspaces --if-present && cargo fmt --all && \".venv\\Scripts\\python.exe\" -m black services/clinical-worker",
+    "format:check": "npm run format:check --workspaces --if-present && cargo fmt --all -- --check && \".venv\\Scripts\\python.exe\" -m black --check services/clinical-worker",
+    "lint": "npm run lint --workspaces --if-present && cargo clippy -p clinical-core --all-targets -- -D warnings",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test:contracts && npm run test:ui && npm run test:rust && npm run test:python && npm run fixtures:check",
+    "test:contracts": "npm run test --workspace @health-intelligence/contracts",
+    "test:ui": "npm run test --workspace @health-intelligence/desktop",
+    "test:rust": "cargo test -p clinical-core",
+    "test:python": "\".venv\\Scripts\\python.exe\" -m pytest -q services/clinical-worker/tests",
+    "fixtures:check": "\".venv\\Scripts\\python.exe\" services/clinical-worker/scripts/check_fixtures.py evals/fixtures",
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
+  }
+}
