@@ -86,6 +86,7 @@ import {
   downloadJsonFile,
   importHealthFiles,
   readStoredHealthDocuments,
+  storeHealthFilesInLocalVault,
   type ImportedHealthDocument,
 } from "./lib/health-files";
 import {
@@ -671,17 +672,23 @@ function useHealthDocumentImport({
   const [lastImported, setLastImported] = useState<ImportedHealthDocument[]>(
     [],
   );
+  const [vaultStored, setVaultStored] = useState(false);
 
   const handleFiles = useCallback(
-    (fileList: FileList | File[] | null) => {
+    async (fileList: FileList | File[] | null) => {
       if (!fileList?.length) return;
-      const result = importHealthFiles(Array.from(fileList));
+      const files = Array.from(fileList);
+      const result = importHealthFiles(files);
       const added = onImported(result.accepted);
       setLastImported(result.accepted);
+      const vault = await storeHealthFilesInLocalVault(files, result.accepted);
+      setVaultStored(vault.stored > 0);
 
       if (added > 0) {
         notify(
-          `${added} belge yerel arşive eklendi. OCR bağlantısı kurulana kadar çıkarım beklemede.`,
+          vault.stored > 0
+            ? `${added} belge ve dosya içeriği yerel kasaya kaydedildi. OCR bağlantısı kurulana kadar çıkarım beklemede.`
+            : `${added} belge metadatası yerel arşive eklendi; dosya kasası bu ortamda kullanılamadı.`,
         );
       } else if (result.accepted.length > 0) {
         notify("Seçilen belgeler zaten yerel arşivde bulunuyor.");
@@ -703,6 +710,7 @@ function useHealthDocumentImport({
     lastImported,
     openPicker,
     setDragActive,
+    vaultStored,
   };
 }
 
@@ -726,6 +734,7 @@ function Documents({
     lastImported,
     openPicker,
     setDragActive,
+    vaultStored,
   } = useHealthDocumentImport({ onImported, notify });
   const allDocuments = useMemo(
     () => [...importedDocuments, ...documents],
@@ -807,7 +816,9 @@ function Documents({
           </h3>
           <p>
             {lastImported.length
-              ? "Dosya adı, boyut ve tür kaydedildi · OCR bağlantısı kurulana kadar çıkarım beklemede."
+              ? vaultStored
+                ? "Dosya içeriği, adı, boyutu ve türü bu cihazdaki kasaya kaydedildi · OCR beklemede."
+                : "Dosya adı, boyut ve tür kaydedildi · Bu ortamda ham dosya kasası kullanılamadı."
               : "PDF, JPG veya PNG · En fazla 25 MB · Ham belge cloud’a gönderilmez."}
           </p>
         </div>

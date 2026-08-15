@@ -24,6 +24,11 @@ export type HealthFileImportResult = {
   rejected: string[];
 };
 
+export type LocalVaultWriteResult = {
+  available: boolean;
+  stored: number;
+};
+
 const supportedExtensions = new Set(["pdf", "png", "jpg", "jpeg"]);
 const supportedMimeTypes = new Set([
   "application/pdf",
@@ -106,6 +111,60 @@ export function readStoredHealthDocuments(): ImportedHealthDocument[] {
     return Array.isArray(parsed) ? (parsed as ImportedHealthDocument[]) : [];
   } catch {
     return [];
+  }
+}
+
+export async function storeHealthFilesInLocalVault(
+  files: File[],
+  documents: ImportedHealthDocument[],
+): Promise<LocalVaultWriteResult> {
+  if (!("indexedDB" in window) || documents.length === 0) {
+    return { available: false, stored: 0 };
+  }
+
+  const documentByFingerprint = new Map(
+    documents.map((document) => [document.fingerprint, document]),
+  );
+  const records = files.flatMap((file) => {
+    const fingerprint = createFingerprint(file);
+    const document = documentByFingerprint.get(fingerprint);
+    return document
+      ? [
+          {
+            ...document,
+            content: file,
+          },
+        ]
+      : [];
+  });
+
+  if (records.length === 0) return { available: true, stored: 0 };
+
+  try {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = window.indexedDB.open("healthcouncil-local-vault", 1);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains("documents")) {
+          db.createObjectStore("documents", { keyPath: "fingerprint" });
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction("documents", "readwrite");
+      const store = transaction.objectStore("documents");
+      records.forEach((record) => store.put(record));
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+    database.close();
+    return { available: true, stored: records.length };
+  } catch {
+    return { available: false, stored: 0 };
   }
 }
 
