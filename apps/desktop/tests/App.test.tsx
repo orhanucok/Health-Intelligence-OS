@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { App, SAFETY_COPY } from "../src/App";
 
@@ -134,5 +140,63 @@ describe("HealthCouncil Desktop unified product shell", () => {
     fireEvent.click(screen.getByRole("button", { name: "Açık temaya geç" }));
     expect(document.documentElement).not.toHaveClass("dark");
     expect(window.localStorage.getItem("healthcouncil-theme")).toBe("light");
+  });
+
+  it("imports a real supported file into the persistent local document archive", async () => {
+    render(<App />);
+    openView("Belgeler");
+    const file = new File(["synthetic lab result"], "ornek-laboratuvar.pdf", {
+      type: "application/pdf",
+      lastModified: 1_723_000_000_000,
+    });
+    fireEvent.change(screen.getByLabelText("Sağlık belgesi seç"), {
+      target: { files: [file] },
+    });
+    expect(
+      await screen.findByText("ornek-laboratuvar.pdf"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Yerel arşivde")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        window.localStorage.getItem("healthcouncil-imported-documents"),
+      ).toContain("ornek-laboratuvar.pdf"),
+    );
+  });
+
+  it("sends and keeps a typed case message instead of silently clearing it", () => {
+    render(<App />);
+    openView("Cases & Chat");
+    const composer = screen.getByLabelText("Vaka mesajı");
+    fireEvent.change(composer, { target: { value: "Ağrı bugün azaldı." } });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Vaka mesajını gönder" }),
+    );
+    expect(screen.getByText("Ağrı bugün azaldı.")).toBeInTheDocument();
+    expect(composer).toHaveValue("");
+  });
+
+  it("saves an outcome form locally with explicit consent state", () => {
+    render(<App />);
+    openView("Outcomes");
+    fireEvent.change(screen.getByLabelText("Doktorun değerlendirmesi"), {
+      target: { value: "Migren; uyku düzeni takibi önerildi." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Outcome’u kaydet" }));
+    expect(
+      screen.getByRole("button", { name: /Outcome kaydedildi/ }),
+    ).toBeInTheDocument();
+    expect(
+      window.localStorage.getItem("healthcouncil-latest-outcome"),
+    ).toContain("Migren");
+  });
+
+  it("routes global search terms to the relevant working module", () => {
+    render(<App />);
+    const searchBox = screen.getByLabelText("Uygulamada ara");
+    fireEvent.change(searchBox, { target: { value: "belge" } });
+    fireEvent.keyDown(searchBox, { key: "Enter" });
+    expect(
+      screen.getByRole("heading", { name: "Sağlık belgeleri" }),
+    ).toBeInTheDocument();
   });
 });

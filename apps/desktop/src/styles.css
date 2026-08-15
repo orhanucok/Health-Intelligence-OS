@@ -4592,6 +4592,161 @@ button:disabled {
   }
 }
 
+/* Functional document controls and resilient theme contrast. */
+.visually-hidden {
+  position: fixed !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}
+
+.upload-zone,
+.onboarding-upload {
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.upload-zone.is-dragging,
+.onboarding-upload.is-dragging {
+  background: var(--health-soft);
+  border-color: var(--health);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--health) 18%, transparent);
+}
+
+.document-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.document-toolbar label {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 9px;
+  color: var(--muted-foreground);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.document-toolbar input,
+.document-toolbar select {
+  min-width: 0;
+  padding: 0;
+  color: var(--foreground);
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0;
+}
+
+.document-toolbar input {
+  width: 150px;
+}
+
+.empty-table-state {
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.empty-table-state strong {
+  color: var(--foreground);
+}
+
+.send-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.dark .workspace :is(.secondary-button, .ask-bar, .filter-tabs button.active),
+.dark
+  .workspace
+  :is(
+    .next-visit-card > button,
+    .case-context section > button,
+    .lab-context > button,
+    .confidence-card + .missing-card button,
+    .interaction-card > button,
+    .provider-summary button
+  ) {
+  color: var(--foreground);
+  background: var(--card);
+  border-color: var(--border);
+}
+
+.dark .confidence-donut::after,
+.dark .estimate-ring::after,
+.dark .upload-icon,
+.dark .tree-root span {
+  background: var(--card);
+}
+
+.dark .filter-tabs {
+  background: var(--muted-ui);
+}
+
+.dark .workspace :is(.tree-root, .source-tree, .outcome-form, .doctor-compare) {
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+/* Paper/report and privacy surfaces intentionally remain light in dark mode. */
+.dark .report-preview,
+.dark .privacy-drawer {
+  --foreground: #17212b;
+  --background: #ffffff;
+  --card: #ffffff;
+  --card-foreground: #17212b;
+  --primary: #17212b;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted-ui: #f4f4f5;
+  --muted-foreground: #667085;
+  --accent-ui: #f4f4f5;
+  --accent-foreground: #18181b;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --line: #e4e4e7;
+  --line-soft: #f0f1f2;
+  color: #17212b;
+  background: #ffffff;
+}
+
+.dark .report-preview :is(h1, h2, h3, strong),
+.dark .privacy-drawer :is(h1, h2, h3, strong) {
+  color: #17212b;
+}
+
+.dark .report-preview :is(p, small),
+.dark .privacy-drawer :is(p, small) {
+  color: #667085;
+}
+
+@media (max-width: 920px) {
+  .document-toolbar {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .document-toolbar label,
+  .document-toolbar input {
+    flex: 1;
+    width: 100%;
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /* shadcn-admin integration layer                                             */
 /* MIT design reference: satnaing/shadcn-admin                               */
@@ -5429,4 +5584,55 @@ button:not(:disabled),
   .sidebar-compact {
     grid-template-columns: 76px minmax(0, 1fr);
   }
+}
+
+/* Final contrast guards: these must stay after the shadcn integration layer. */
+.dark
+  .workspace
+  :is(
+    .review-strip button,
+    .medication-alert button,
+    .advanced-intro button,
+    .must-not-miss button
+  ) {
+  color: var(--foreground);
+  background: var(--card);
+  border-color: var(--border);
+}
+
+.dark .tree-root,
+.dark .evidence-columns > div {
+  color: var(--foreground);
+  background: var(--muted-ui);
+  border-color: var(--border);
+}
+
+.dark .evidence-columns p {
+  color: var(--muted-foreground);
+}
+
+.dark .report-nav > button.active {
+  color: #d8fff2;
+  background: #164f43;
+}
+
+.report-nav > button.active span,
+.choice-group button.selected {
+  color: #ffffff;
+  background: #286f63;
+  border-color: #286f63;
+}
+
+:root:not(.dark)
+  .workspace
+  :is(
+    .chart-y,
+    .case-state-strip > div:not(.complete):not(.active),
+    .case-item em,
+    .message small,
+    .chat-composer > small,
+    .tree-branch em,
+    .attention-main em
+  ) {
+  color: #617378;
 }

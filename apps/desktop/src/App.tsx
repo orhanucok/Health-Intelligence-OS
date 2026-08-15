@@ -71,14 +71,23 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
+  useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
 } from "react";
 import { UiBadge } from "./components/ui/badge";
 import { Button } from "./components/ui/button";
+import {
+  HEALTH_FILE_ACCEPT,
+  downloadJsonFile,
+  importHealthFiles,
+  readStoredHealthDocuments,
+  type ImportedHealthDocument,
+} from "./lib/health-files";
 import {
   councilAgents,
   documents,
@@ -650,14 +659,93 @@ function HealthPassport() {
   );
 }
 
+function useHealthDocumentImport({
+  onImported,
+  notify,
+}: {
+  onImported: (items: ImportedHealthDocument[]) => number;
+  notify: (message: string) => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [lastImported, setLastImported] = useState<ImportedHealthDocument[]>(
+    [],
+  );
+
+  const handleFiles = useCallback(
+    (fileList: FileList | File[] | null) => {
+      if (!fileList?.length) return;
+      const result = importHealthFiles(Array.from(fileList));
+      const added = onImported(result.accepted);
+      setLastImported(result.accepted);
+
+      if (added > 0) {
+        notify(
+          `${added} belge yerel arşive eklendi. OCR bağlantısı kurulana kadar çıkarım beklemede.`,
+        );
+      } else if (result.accepted.length > 0) {
+        notify("Seçilen belgeler zaten yerel arşivde bulunuyor.");
+      }
+
+      if (result.rejected.length > 0) {
+        notify(result.rejected[0] ?? "Dosya içe aktarılamadı.");
+      }
+    },
+    [notify, onImported],
+  );
+
+  const openPicker = () => fileInputRef.current?.click();
+
+  return {
+    dragActive,
+    fileInputRef,
+    handleFiles,
+    lastImported,
+    openPicker,
+    setDragActive,
+  };
+}
+
 function Documents({
   notify,
   navigate,
+  importedDocuments,
+  onImported,
 }: {
   notify: (message: string) => void;
   navigate: (view: AppView) => void;
+  importedDocuments: ImportedHealthDocument[];
+  onImported: (items: ImportedHealthDocument[]) => number;
 }) {
-  const [uploaded, setUploaded] = useState(false);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "local" | "review">("all");
+  const {
+    dragActive,
+    fileInputRef,
+    handleFiles,
+    lastImported,
+    openPicker,
+    setDragActive,
+  } = useHealthDocumentImport({ onImported, notify });
+  const allDocuments = useMemo(
+    () => [...importedDocuments, ...documents],
+    [importedDocuments],
+  );
+  const visibleDocuments = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase("tr-TR");
+    return allDocuments.filter((document) => {
+      const matchesQuery =
+        !normalizedQuery ||
+        `${document.name} ${document.type} ${document.status}`
+          .toLocaleLowerCase("tr-TR")
+          .includes(normalizedQuery);
+      const matchesFilter =
+        filter === "all" ||
+        (filter === "local" && document.status === "Yerel arşivde") ||
+        (filter === "review" && document.status === "İnceleme gerekli");
+      return matchesQuery && matchesFilter;
+    });
+  }, [allDocuments, filter, query]);
   return (
     <div className="screen">
       <PageHeading
@@ -665,34 +753,65 @@ function Documents({
         title="Sağlık belgeleri"
         description="PDF, JPG ve PNG dosyalarını yerel olarak içe aktarın; çıkarılan alanları kaynağıyla doğrulayın."
         actions={
-          <button
-            className="primary-button"
-            onClick={() => {
-              setUploaded(true);
-              notify("Sentetik belge demo kuyruğuna eklendi.");
-            }}
-          >
+          <button className="primary-button" onClick={openPicker}>
             <UploadCloud size={17} /> Belge yükle
           </button>
         }
       />
-      <section className={`upload-zone ${uploaded ? "upload-success" : ""}`}>
+      <input
+        ref={fileInputRef}
+        className="visually-hidden"
+        type="file"
+        accept={HEALTH_FILE_ACCEPT}
+        multiple
+        aria-label="Sağlık belgesi seç"
+        onChange={(event) => {
+          handleFiles(event.target.files);
+          event.target.value = "";
+        }}
+      />
+      <section
+        className={`upload-zone ${lastImported.length ? "upload-success" : ""} ${dragActive ? "is-dragging" : ""}`}
+        onDragEnter={(event) => {
+          event.preventDefault();
+          setDragActive(true);
+        }}
+        onDragOver={(event) => event.preventDefault()}
+        onDragLeave={(event) => {
+          if (
+            !event.currentTarget.contains(event.relatedTarget as Node | null)
+          ) {
+            setDragActive(false);
+          }
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          setDragActive(false);
+          handleFiles(event.dataTransfer.files);
+        }}
+      >
         <span className="upload-icon">
-          {uploaded ? <FileCheck2 size={28} /> : <UploadCloud size={28} />}
+          {lastImported.length ? (
+            <FileCheck2 size={28} />
+          ) : (
+            <UploadCloud size={28} />
+          )}
         </span>
         <div>
           <h3>
-            {uploaded
-              ? "Sentetik belge kuyruğa alındı"
-              : "Belgelerinizi buraya bırakın"}
+            {lastImported.length
+              ? `${lastImported.length} belge yerel arşive eklendi`
+              : dragActive
+                ? "Dosyaları bırakın"
+                : "Belgelerinizi buraya bırakın"}
           </h3>
           <p>
-            {uploaded
-              ? "OCR → çıkarım → tekilleştirme → inceleme akışı başlatıldı."
-              : "PDF, JPG veya PNG · Ham belge varsayılan olarak cloud’a gönderilmez."}
+            {lastImported.length
+              ? "Dosya adı, boyut ve tür kaydedildi · OCR bağlantısı kurulana kadar çıkarım beklemede."
+              : "PDF, JPG veya PNG · En fazla 25 MB · Ham belge cloud’a gönderilmez."}
           </p>
         </div>
-        <button className="secondary-button" onClick={() => setUploaded(true)}>
+        <button className="secondary-button" onClick={openPicker}>
           Dosya seç
         </button>
         <Badge tone="green">
@@ -741,13 +860,30 @@ function Documents({
           eyebrow="BELGE ARŞİVİ"
           title="Tüm belgeler"
           action={
-            <div className="table-actions">
-              <button>
-                <Filter size={15} /> Filtrele
-              </button>
-              <button>
-                <Search size={15} /> Ara
-              </button>
+            <div className="document-toolbar">
+              <label>
+                <Filter size={15} />
+                <select
+                  aria-label="Belge filtresi"
+                  value={filter}
+                  onChange={(event) =>
+                    setFilter(event.target.value as typeof filter)
+                  }
+                >
+                  <option value="all">Tüm belgeler</option>
+                  <option value="local">Yerel arşiv</option>
+                  <option value="review">İnceleme gerekli</option>
+                </select>
+              </label>
+              <label>
+                <Search size={15} />
+                <input
+                  aria-label="Belgelerde ara"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Belge ara…"
+                />
+              </label>
             </div>
           }
         />
@@ -759,14 +895,20 @@ function Documents({
             <span>Durum</span>
             <span />
           </div>
-          {documents.map((doc) => (
+          {visibleDocuments.map((doc) => (
             <div className="document-row" key={doc.id}>
               <div className="document-name">
-                <span className="file-type">PDF</span>
+                <span className="file-type">
+                  {doc.name.split(".").pop()?.toLocaleUpperCase("tr-TR") ||
+                    "DOSYA"}
+                </span>
                 <div>
                   <strong>{doc.name}</strong>
                   <small>
-                    {doc.type} · {doc.pages} sayfa · {doc.id}
+                    {doc.type} ·{" "}
+                    {(doc as ImportedHealthDocument).sizeLabel ??
+                      `${doc.pages} sayfa`}{" "}
+                    · {doc.id}
                   </small>
                 </div>
               </div>
@@ -777,14 +919,35 @@ function Documents({
                   <i style={{ width: `${doc.progress}%` }} />
                 </span>
               </div>
-              <Badge tone={doc.status === "Doğrulandı" ? "green" : "amber"}>
+              <Badge
+                tone={
+                  doc.status === "Doğrulandı" || doc.status === "Yerel arşivde"
+                    ? "green"
+                    : "amber"
+                }
+              >
                 {doc.status}
               </Badge>
-              <IconButton label="Belge seçenekleri">
+              <IconButton
+                label={`${doc.name} metadatasını indir`}
+                onClick={() =>
+                  downloadJsonFile(
+                    `${doc.name.replace(/\.[^.]+$/, "")}-metadata.json`,
+                    doc,
+                  )
+                }
+              >
                 <MoreHorizontal size={17} />
               </IconButton>
             </div>
           ))}
+          {visibleDocuments.length === 0 ? (
+            <div className="empty-table-state">
+              <FileSearch size={20} />
+              <strong>Eşleşen belge bulunamadı</strong>
+              <span>Arama metnini veya filtreyi değiştirin.</span>
+            </div>
+          ) : null}
         </div>
       </section>
       <section className="review-strip">
@@ -1483,9 +1646,37 @@ function Medications() {
   );
 }
 
-function CasesChat({ navigate }: { navigate: (view: AppView) => void }) {
+function CasesChat({
+  navigate,
+  notify,
+}: {
+  navigate: (view: AppView) => void;
+  notify: (message: string) => void;
+}) {
   const [message, setMessage] = useState("");
   const [answers, setAnswers] = useState<string[]>([]);
+  const [sentMessages, setSentMessages] = useState<
+    Array<{ id: string; text: string; time: string }>
+  >([]);
+  const sendMessage = () => {
+    const text = message.trim();
+    if (!text) return;
+    setSentMessages((items) => [
+      ...items,
+      {
+        id: `${Date.now()}-${items.length}`,
+        text,
+        time: new Intl.DateTimeFormat("tr-TR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date()),
+      },
+    ]);
+    setMessage("");
+    notify(
+      "Mesaj vakaya kaydedildi. AI yanıtı için sağlayıcı bağlantısı gerekir.",
+    );
+  };
   const questions = [
     "Ağrı tam olarak nerede?",
     "Ne zaman başladı?",
@@ -1498,7 +1689,15 @@ function CasesChat({ navigate }: { navigate: (view: AppView) => void }) {
         title="Cases & Chat"
         description="Önce güvenlik kontrolü, sonra uyarlanabilir sorular; gerekli olduğunda araştırma ve konseye tırmanır."
         actions={
-          <button className="primary-button">
+          <button
+            className="primary-button"
+            onClick={() => {
+              setAnswers([]);
+              setSentMessages([]);
+              setMessage("");
+              notify("Yeni vaka taslağı açıldı.");
+            }}
+          >
             <Plus size={16} /> Yeni vaka
           </button>
         }
@@ -1607,6 +1806,15 @@ function CasesChat({ navigate }: { navigate: (view: AppView) => void }) {
                 <small>HealthCouncil · Safety-first</small>
               </div>
             </div>
+            {sentMessages.map((item) => (
+              <div className="message user-message" key={item.id}>
+                <div className="avatar small">DY</div>
+                <div>
+                  <p>{item.text}</p>
+                  <small>Bugün · {item.time}</small>
+                </div>
+              </div>
+            ))}
             <div className="adaptive-questions">
               <div className="questions-head">
                 <div>
@@ -1652,10 +1860,10 @@ function CasesChat({ navigate }: { navigate: (view: AppView) => void }) {
           </div>
           <footer className="chat-composer">
             <div className="composer-tools">
-              <button>
+              <button onClick={() => navigate("documents")}>
                 <Plus size={16} /> Belge ekle
               </button>
-              <button>
+              <button onClick={() => navigate("passport")}>
                 <Microscope size={16} /> Patient State
               </button>
             </div>
@@ -1664,9 +1872,20 @@ function CasesChat({ navigate }: { navigate: (view: AppView) => void }) {
                 aria-label="Vaka mesajı"
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    sendMessage();
+                  }
+                }}
                 placeholder="Yanıtınızı yazın veya durumunuzu anlatın…"
               />
-              <button className="send-button" onClick={() => setMessage("")}>
+              <button
+                className="send-button"
+                aria-label="Vaka mesajını gönder"
+                disabled={!message.trim()}
+                onClick={sendMessage}
+              >
                 <Send size={18} />
               </button>
             </div>
@@ -2211,19 +2430,30 @@ function Reports({ notify }: { notify: (message: string) => void }) {
           <>
             <button
               className="secondary-button"
-              onClick={() => notify("JSON dışa aktarma demo akışı hazırlandı.")}
+              onClick={() => {
+                downloadJsonFile("healthcouncil-patient-state-v31.json", {
+                  exportedAt: new Date().toISOString(),
+                  patient,
+                  documents,
+                  labs: labRows,
+                  medications,
+                  safetyNotice: SAFETY_COPY,
+                });
+                notify("Patient State JSON dosyası indirildi.");
+              }}
             >
               <Download size={16} /> JSON
             </button>
             <button
               className="primary-button"
-              onClick={() =>
+              onClick={() => {
                 notify(
-                  "PDF önizleme oluşturuldu; imzalı export Gate 6’da açılacak.",
-                )
-              }
+                  "Yazdırma penceresi açılıyor; hedef olarak PDF seçebilirsiniz.",
+                );
+                window.print();
+              }}
             >
-              <FileText size={16} /> PDF oluştur
+              <FileText size={16} /> Yazdır / PDF
             </button>
           </>
         }
@@ -2414,7 +2644,44 @@ function Reports({ notify }: { notify: (message: string) => void }) {
   );
 }
 
-function Outcomes() {
+function Outcomes({ notify }: { notify: (message: string) => void }) {
+  const [visitStatus, setVisitStatus] = useState("Evet");
+  const [assessment, setAssessment] = useState("");
+  const [requestedTests, setRequestedTests] = useState("");
+  const [treatmentChange, setTreatmentChange] = useState("");
+  const [delayStatus, setDelayStatus] = useState("Hayır");
+  const [consent, setConsent] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const resetOutcome = () => {
+    setVisitStatus("Evet");
+    setAssessment("");
+    setRequestedTests("");
+    setTreatmentChange("");
+    setDelayStatus("Hayır");
+    setConsent(false);
+    setSaved(false);
+    notify("Yeni sonuç formu hazırlandı.");
+  };
+  const saveOutcome = () => {
+    if (!assessment.trim()) {
+      notify("Kaydetmek için doktor değerlendirmesini yazın.");
+      return;
+    }
+    window.localStorage.setItem(
+      "healthcouncil-latest-outcome",
+      JSON.stringify({
+        visitStatus,
+        assessment,
+        requestedTests,
+        treatmentChange,
+        delayStatus,
+        anonymousEvaluationConsent: consent,
+        savedAt: new Date().toISOString(),
+      }),
+    );
+    setSaved(true);
+    notify("Hekim sonucu bu cihazda kaydedildi.");
+  };
   return (
     <div className="screen">
       <PageHeading
@@ -2422,7 +2689,7 @@ function Outcomes() {
         title="Sonuçlar ve takip"
         description="Hekim sonucu, istenen testler ve uygulamanın etkisini ayrı rızayla kaydedin."
         actions={
-          <button className="primary-button">
+          <button className="primary-button" onClick={resetOutcome}>
             <Plus size={16} /> Yeni sonuç ekle
           </button>
         }
@@ -2466,23 +2733,44 @@ function Outcomes() {
           <div className="question-field">
             <label>Doktora gidildi mi?</label>
             <div className="choice-group">
-              <button className="selected">Evet</button>
-              <button>Hayır</button>
-              <button>Randevu bekliyor</button>
+              {["Evet", "Hayır", "Randevu bekliyor"].map((choice) => (
+                <button
+                  className={visitStatus === choice ? "selected" : ""}
+                  onClick={() => setVisitStatus(choice)}
+                  key={choice}
+                >
+                  {choice}
+                </button>
+              ))}
             </div>
           </div>
           <div className="question-field">
             <label>Doktorun değerlendirmesi neydi?</label>
-            <textarea placeholder="Hekimin söylediğini kendi sözlerinizle yazın…" />
+            <textarea
+              aria-label="Doktorun değerlendirmesi"
+              value={assessment}
+              onChange={(event) => setAssessment(event.target.value)}
+              placeholder="Hekimin söylediğini kendi sözlerinizle yazın…"
+            />
           </div>
           <div className="form-grid">
             <div className="question-field">
               <label>Hangi testler istendi?</label>
-              <input placeholder="MR, kan testi…" />
+              <input
+                aria-label="İstenen testler"
+                value={requestedTests}
+                onChange={(event) => setRequestedTests(event.target.value)}
+                placeholder="MR, kan testi…"
+              />
             </div>
             <div className="question-field">
               <label>Tedavide değişiklik oldu mu?</label>
-              <input placeholder="İlaç / doz / izlem…" />
+              <input
+                aria-label="Tedavi değişikliği"
+                value={treatmentChange}
+                onChange={(event) => setTreatmentChange(event.target.value)}
+                placeholder="İlaç / doz / izlem…"
+              />
             </div>
           </div>
           <div className="question-field">
@@ -2490,19 +2778,33 @@ function Outcomes() {
               HealthCouncil nedeniyle doktora gitmeyi ertelediniz mi?
             </label>
             <div className="choice-group">
-              <button>Hayır</button>
-              <button>Evet</button>
-              <button>Emin değilim</button>
+              {["Hayır", "Evet", "Emin değilim"].map((choice) => (
+                <button
+                  className={delayStatus === choice ? "selected" : ""}
+                  onClick={() => setDelayStatus(choice)}
+                  key={choice}
+                >
+                  {choice}
+                </button>
+              ))}
             </div>
           </div>
           <div className="consent-row">
-            <input type="checkbox" id="consent" />
+            <input
+              type="checkbox"
+              id="consent"
+              checked={consent}
+              onChange={(event) => setConsent(event.target.checked)}
+            />
             <label htmlFor="consent">
               Kimliksiz sonucu genel değerlendirme setine katkı için paylaşmayı
               ayrıca onaylıyorum.
             </label>
           </div>
-          <button className="primary-button">Outcome’u kaydet</button>
+          <button className="primary-button" onClick={saveOutcome}>
+            {saved ? <Check size={16} /> : null}
+            {saved ? "Outcome kaydedildi" : "Outcome’u kaydet"}
+          </button>
         </section>
         <aside className="card doctor-compare">
           <SectionHeading
@@ -2893,8 +3195,24 @@ function Advanced() {
   );
 }
 
-function Onboarding({ close }: { close: () => void }) {
+function Onboarding({
+  close,
+  notify,
+  onImported,
+}: {
+  close: () => void;
+  notify: (message: string) => void;
+  onImported: (items: ImportedHealthDocument[]) => number;
+}) {
   const [step, setStep] = useState(1);
+  const {
+    dragActive,
+    fileInputRef,
+    handleFiles,
+    lastImported,
+    openPicker,
+    setDragActive,
+  } = useHealthDocumentImport({ onImported, notify });
   const steps = [
     "Güvenli başlangıç",
     "Veri & şifreleme",
@@ -3067,14 +3385,44 @@ function Onboarding({ close }: { close: () => void }) {
                 Belgelerinizi yükleyin ve temel bilgileri tamamlayın. Çıkarılan
                 her kritik alanı siz doğrularsınız.
               </p>
-              <div className="onboarding-upload">
+              <input
+                ref={fileInputRef}
+                className="visually-hidden"
+                type="file"
+                accept={HEALTH_FILE_ACCEPT}
+                multiple
+                aria-label="İlk sağlık belgelerini seç"
+                onChange={(event) => {
+                  handleFiles(event.target.files);
+                  event.target.value = "";
+                }}
+              />
+              <div
+                className={`onboarding-upload ${dragActive ? "is-dragging" : ""}`}
+                onDragEnter={(event) => {
+                  event.preventDefault();
+                  setDragActive(true);
+                }}
+                onDragOver={(event) => event.preventDefault()}
+                onDragLeave={() => setDragActive(false)}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  setDragActive(false);
+                  handleFiles(event.dataTransfer.files);
+                }}
+              >
                 <UploadCloud size={28} />
-                <strong>İlk sağlık belgelerinizi bırakın</strong>
+                <strong>
+                  {lastImported.length
+                    ? `${lastImported.length} belge hazır`
+                    : "İlk sağlık belgelerinizi bırakın"}
+                </strong>
                 <p>
-                  e‑Nabız PDF, laboratuvar, epikriz, reçete veya görüntüleme
-                  raporu
+                  {lastImported.length
+                    ? "Belgeler yerel arşive eklendi."
+                    : "e‑Nabız PDF, laboratuvar, epikriz, reçete veya görüntüleme raporu"}
                 </p>
-                <button>Dosya seç</button>
+                <button onClick={openPicker}>Dosya seç</button>
               </div>
               <div className="basic-fields">
                 <label>
@@ -3129,6 +3477,12 @@ export function App() {
   const [sidebarCompact, setSidebarCompact] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [toast, setToast] = useState("");
+  const [globalSearch, setGlobalSearch] = useState("");
+  const [importedDocuments, setImportedDocuments] = useState(
+    readStoredHealthDocuments,
+  );
+  const globalSearchRef = useRef<HTMLInputElement>(null);
+  const toastTimeoutRef = useRef<number | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     const saved = window.localStorage.getItem("healthcouncil-theme");
     return saved === "light" || saved === "dark" ? saved : "dark";
@@ -3138,9 +3492,86 @@ export function App() {
     document.documentElement.classList.toggle("dark", theme === "dark");
     window.localStorage.setItem("healthcouncil-theme", theme);
   }, [theme]);
-  const notify = (message: string) => {
+  useEffect(() => {
+    window.localStorage.setItem(
+      "healthcouncil-imported-documents",
+      JSON.stringify(importedDocuments),
+    );
+  }, [importedDocuments]);
+  useEffect(() => {
+    const focusSearch = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        globalSearchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", focusSearch);
+    return () => {
+      window.removeEventListener("keydown", focusSearch);
+      if (toastTimeoutRef.current !== null) {
+        window.clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
+  const notify = useCallback((message: string) => {
+    if (toastTimeoutRef.current !== null) {
+      window.clearTimeout(toastTimeoutRef.current);
+    }
     setToast(message);
-    window.setTimeout(() => setToast(""), 3200);
+    toastTimeoutRef.current = window.setTimeout(() => {
+      setToast("");
+      toastTimeoutRef.current = null;
+    }, 3200);
+  }, []);
+  const addImportedDocuments = useCallback(
+    (items: ImportedHealthDocument[]) => {
+      const known = new Set(
+        importedDocuments.map((document) => document.fingerprint),
+      );
+      const additions = items.filter(
+        (document) => !known.has(document.fingerprint),
+      );
+      if (additions.length > 0) {
+        setImportedDocuments((current) => [...additions, ...current]);
+      }
+      return additions.length;
+    },
+    [importedDocuments],
+  );
+  const runGlobalSearch = () => {
+    const query = globalSearch.trim().toLocaleLowerCase("tr-TR");
+    if (!query) {
+      globalSearchRef.current?.focus();
+      return;
+    }
+    const routes: Array<{ view: AppView; terms: string }> = [
+      {
+        view: "documents",
+        terms: "belge dosya pdf epikriz reçete upload yükle",
+      },
+      { view: "labs", terms: "laboratuvar lab ferritin crp tsh b12 kan sonuç" },
+      { view: "medications", terms: "ilaç medication reçete doz" },
+      { view: "cases", terms: "vaka chat ağrı semptom karın baş" },
+      { view: "reports", terms: "rapor pdf json doktor özet çıktı" },
+      { view: "outcomes", terms: "sonuç outcome takip hekim" },
+      { view: "research", terms: "araştırma kaynak kanıt research" },
+      { view: "council", terms: "konsey ajan model council" },
+      {
+        view: "providers",
+        terms: "api ai bağlantı provider gemini claude openai",
+      },
+      { view: "passport", terms: "profil passport kişi kan grubu kilo boy" },
+      { view: "timeline", terms: "timeline zaman geçmiş" },
+    ];
+    const route = routes.find((item) => item.terms.includes(query));
+    if (route) {
+      setView(route.view);
+      notify(
+        `“${globalSearch.trim()}” için ${viewTitles[route.view].title} açıldı.`,
+      );
+    } else {
+      notify(`“${globalSearch.trim()}” için eşleşen bölüm bulunamadı.`);
+    }
   };
   const content = useMemo(() => {
     switch (view) {
@@ -3149,7 +3580,14 @@ export function App() {
       case "passport":
         return <HealthPassport />;
       case "documents":
-        return <Documents notify={notify} navigate={setView} />;
+        return (
+          <Documents
+            notify={notify}
+            navigate={setView}
+            importedDocuments={importedDocuments}
+            onImported={addImportedDocuments}
+          />
+        );
       case "review":
         return <ReviewInbox notify={notify} />;
       case "timeline":
@@ -3159,7 +3597,7 @@ export function App() {
       case "medications":
         return <Medications />;
       case "cases":
-        return <CasesChat navigate={setView} />;
+        return <CasesChat navigate={setView} notify={notify} />;
       case "research":
         return <Research />;
       case "council":
@@ -3169,13 +3607,13 @@ export function App() {
       case "reports":
         return <Reports notify={notify} />;
       case "outcomes":
-        return <Outcomes />;
+        return <Outcomes notify={notify} />;
       case "providers":
         return <Providers notify={notify} />;
       case "advanced":
         return <Advanced />;
     }
-  }, [view]);
+  }, [addImportedDocuments, importedDocuments, notify, view]);
   return (
     <div className={`app-shell ${sidebarCompact ? "sidebar-compact" : ""}`}>
       <aside className="sidebar">
@@ -3291,7 +3729,17 @@ export function App() {
         <div className="global-search">
           <Search size={16} />
           <input
+            ref={globalSearchRef}
             aria-label="Uygulamada ara"
+            value={globalSearch}
+            onChange={(event) => setGlobalSearch(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") runGlobalSearch();
+              if (event.key === "Escape") {
+                setGlobalSearch("");
+                event.currentTarget.blur();
+              }
+            }}
             placeholder="Belge, sonuç, ilaç veya vaka ara…"
           />
           <kbd>Ctrl K</kbd>
@@ -3308,10 +3756,21 @@ export function App() {
           >
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           </IconButton>
-          <IconButton label="Yardım">
+          <IconButton
+            label="Yardım"
+            onClick={() => {
+              setShowOnboarding(true);
+              notify("Yardım ve güvenli başlangıç rehberi açıldı.");
+            }}
+          >
             <HelpCircle size={18} />
           </IconButton>
-          <IconButton label="Bildirimler">
+          <IconButton
+            label="Bildirimler"
+            onClick={() =>
+              notify("4 işlem bildirimi Health Inbox’ta listeleniyor.")
+            }
+          >
             <Bell size={18} />
             <i className="notification-dot" />
           </IconButton>
@@ -3335,7 +3794,11 @@ export function App() {
         </div>
       ) : null}
       {showOnboarding ? (
-        <Onboarding close={() => setShowOnboarding(false)} />
+        <Onboarding
+          close={() => setShowOnboarding(false)}
+          notify={notify}
+          onImported={addImportedDocuments}
+        />
       ) : null}
     </div>
   );
