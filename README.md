@@ -11,11 +11,14 @@ Implemented and tested in `0.1.0`:
 - React + Tauri unified Windows product shell covering the full Turkish HealthCouncil v3.0 information architecture;
 - capped review queue where critical conflicts are always ranked first;
 - provenance drawer with keyboard focus, Escape close, and focus restoration;
-- Rust append-only event-store primitive, trust gate, conflict preservation, and fail-closed lab trends;
+- Rust append-only event-store primitive, trust gate, conflict preservation, and fail-closed lab trends,
+  wired into the desktop shell over Tauri commands;
+- disk-backed import journal under the app data directory (`vault/events.jsonl`), append-only on disk,
+  duplicate-rejecting, and reported honestly in the UI when it is unavailable;
 - local Python fixture extractor that rejects unknown fields, direct-identifier markers, unsupported locales/sources, and mismatched units;
 - offline MSI and NSIS packaging with the WebView2 runtime included.
 
-Not implemented in this slice: real document upload/OCR, persistent patient storage, provider/API connections, evidence retrieval, medication reasoning, multi-model council, diagnosis percentages, treatment advice, or emergency triage. UI actions that are not persisted are visibly labelled as simulations or disabled.
+Not implemented in this slice: real document upload/OCR, persistent canonical patient state (only the import event journal is durable), provider/API connections, evidence retrieval, medication reasoning, multi-model council, diagnosis percentages, treatment advice, or emergency triage. UI actions that are not persisted are visibly labelled as simulations or disabled.
 
 ## Build and verify
 

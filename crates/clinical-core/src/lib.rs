@@ -27,6 +27,7 @@ pub enum TrustTier {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProvenanceEdge {
     pub id: String,
     pub document_id: String,
@@ -37,6 +38,7 @@ pub struct ProvenanceEdge {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CanonicalObservation {
     pub id: String,
     pub concept_code: String,
@@ -84,6 +86,7 @@ pub enum CanonicalizationError {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ReviewPriority {
     pub severity: f64,
     pub uncertainty: f64,
@@ -99,6 +102,7 @@ impl ReviewPriority {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ReviewItem {
     pub id: String,
     pub priority: ReviewPriority,
@@ -124,6 +128,7 @@ pub fn prioritized_review(mut items: Vec<ReviewItem>) -> Vec<ReviewItem> {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PatientEvent {
     pub sequence: u64,
     pub event_id: String,
@@ -162,6 +167,7 @@ pub enum EventStoreError {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LabPoint {
     pub observation_id: String,
     pub concept_code: String,
@@ -173,6 +179,7 @@ pub struct LabPoint {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LabTrend {
     pub formula_version: String,
     pub input_observation_ids: Vec<String>,

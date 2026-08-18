@@ -163,6 +163,34 @@ describe("HealthCouncil Desktop unified product shell", () => {
     );
   });
 
+  it("tells the user the record is not durable when the vault is absent", async () => {
+    render(<App />);
+    openView("Belgeler");
+    // jsdom has no Tauri shell, so the vault bridge reports "unavailable" and
+    // the screen must say so rather than implying the record is on disk.
+    expect(
+      await screen.findByText(/Kalıcı kayıt defteri bu ortamda yok/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Kalıcı kayıt defteri etkin/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("never claims a durable journal write for a browser-only import", async () => {
+    render(<App />);
+    openView("Belgeler");
+    const file = new File(["synthetic lab result"], "kasa-yok.pdf", {
+      type: "application/pdf",
+      lastModified: 1_723_000_100_000,
+    });
+    fireEvent.change(screen.getByLabelText("Sağlık belgesi seç"), {
+      target: { files: [file] },
+    });
+    expect(
+      await screen.findByText(/yalnızca bu oturumun tarayıcı deposunda/),
+    ).toBeInTheDocument();
+  });
+
   it("sends and keeps a typed case message instead of silently clearing it", () => {
     render(<App />);
     openView("Cases & Chat");

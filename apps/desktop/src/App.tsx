@@ -90,6 +90,12 @@ import {
   type ImportedHealthDocument,
 } from "./lib/health-files";
 import {
+  appendVaultEvent,
+  documentImportEventId,
+  readVaultStatus,
+  type VaultStatus,
+} from "./lib/vault";
+import {
   councilAgents,
   documents,
   inboxItems,
@@ -684,11 +690,26 @@ function useHealthDocumentImport({
       const vault = await storeHealthFilesInLocalVault(files, result.accepted);
       setVaultStored(vault.stored > 0);
 
+      // Journal the import in the Rust append-only vault. Re-importing the
+      // same file is rejected there by event id, so this stays idempotent.
+      let journalled = 0;
+      let journalAvailable = false;
+      for (const document of result.accepted) {
+        const appended = await appendVaultEvent({
+          eventId: documentImportEventId(document.fingerprint),
+          eventType: "DocumentImported",
+          sourceId: document.id,
+          recordedAt: document.importedAt,
+        });
+        if (appended.state !== "unavailable") journalAvailable = true;
+        if (appended.state === "ok") journalled += 1;
+      }
+
       if (added > 0) {
         notify(
-          vault.stored > 0
-            ? `${added} belge ve dosya içeriği yerel kasaya kaydedildi. OCR bağlantısı kurulana kadar çıkarım beklemede.`
-            : `${added} belge metadatası yerel arşive eklendi; dosya kasası bu ortamda kullanılamadı.`,
+          journalAvailable
+            ? `${added} belge yerel kasaya kaydedildi; ${journalled} olay değiştirilemez kayıt defterine yazıldı.`
+            : `${added} belge yalnızca bu oturumun tarayıcı deposunda tutuluyor — kalıcı kayıt defteri yalnızca masaüstü uygulamasında çalışır.`,
         );
       } else if (result.accepted.length > 0) {
         notify("Seçilen belgeler zaten yerel arşivde bulunuyor.");
@@ -727,6 +748,8 @@ function Documents({
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "local" | "review">("all");
+  const [vaultStatus, setVaultStatus] = useState<VaultStatus | null>(null);
+  const [vaultChecked, setVaultChecked] = useState(false);
   const {
     dragActive,
     fileInputRef,
@@ -736,6 +759,20 @@ function Documents({
     setDragActive,
     vaultStored,
   } = useHealthDocumentImport({ onImported, notify });
+
+  // Re-read after every import so the journal count the user sees is the
+  // count actually on disk, never an optimistic local guess.
+  useEffect(() => {
+    let cancelled = false;
+    void readVaultStatus().then((result) => {
+      if (cancelled) return;
+      setVaultStatus(result.state === "ok" ? result.value : null);
+      setVaultChecked(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [lastImported]);
   const allDocuments = useMemo(
     () => [...importedDocuments, ...documents],
     [importedDocuments],
@@ -767,6 +804,33 @@ function Documents({
           </button>
         }
       />
+      {vaultChecked ? (
+        <p
+          className="vault-status"
+          data-durable={vaultStatus ? "true" : "false"}
+        >
+          {vaultStatus ? (
+            <>
+              <Database size={15} aria-hidden="true" />
+              <span>
+                Kalıcı kayıt defteri etkin — {vaultStatus.eventCount} olay
+                diskte.
+                {vaultStatus.intact
+                  ? ""
+                  : " Kayıt defterinde okunamayan satır var; eksik olaylar atlandı."}
+              </span>
+            </>
+          ) : (
+            <>
+              <AlertTriangle size={15} aria-hidden="true" />
+              <span>
+                Kalıcı kayıt defteri bu ortamda yok. Belgeler yalnızca tarayıcı
+                deposunda tutuluyor ve kalıcı değil.
+              </span>
+            </>
+          )}
+        </p>
+      ) : null}
       <input
         ref={fileInputRef}
         className="visually-hidden"

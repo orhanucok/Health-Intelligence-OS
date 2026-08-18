@@ -5636,3 +5636,32 @@ button:not(:disabled),
   ) {
   color: #617378;
 }
+
+/* Durability banner on the document pipeline: states plainly whether the
+   record is on disk or only in this session's browser storage. */
+.vault-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1.25rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.vault-status[data-durable="true"] {
+  border-color: color-mix(in srgb, var(--chart-2) 45%, var(--border));
+}
+
+.vault-status[data-durable="false"] {
+  border-color: color-mix(in srgb, var(--destructive) 45%, var(--border));
+  color: var(--foreground);
+}
+
+.vault-status svg {
+  flex-shrink: 0;
+}
